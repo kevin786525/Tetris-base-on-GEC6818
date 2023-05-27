@@ -1,0 +1,9 @@
+#some teset file
+tmp.c
+
+#executable file
+bin/    
+
+
+#hidding directory & vscode configuration file
+.vscode/

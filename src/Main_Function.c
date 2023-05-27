@@ -36,7 +36,7 @@ int * map;
 extern struct fb_fix_screeninfo fixinfo;
 extern struct fb_var_screeninfo varinfo; // 可变属性
 extern struct input_event pos_buf;
-extern struct touch_ready tc_state;
+extern struct touch_state tc_state;
 /* unsigned long T_WIDTH = 0;
 unsigned long T_HEIGHT = 0;
 
@@ -539,8 +539,8 @@ void font_background(bitmap * bm, int x, int y){
 bool project_lock(){
     
     int my_passwd[6] = {1, 2, 3, 4, 5, 6};
-    unsigned int input_num[6] = {0, 0, 0, 0, 0, 0};
-    int i = 0;
+    int input_num[6] = {0, 0, 0, 0, 0, 0};
+    volatile int i = 0;
     pos_x = 0;
     pos_y = 0;
 flag_lock:
@@ -549,89 +549,89 @@ flag_lock:
         // flash_time(NULL);
 
         //确认时退出
-        if(pos_x > 227  && pos_x < 300 && pos_y > 350 && pos_y < 400){
+        if(pos_x > 225  && pos_x < 310 && pos_y > 310 && pos_y < 380 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0;
             break;
         }
         
-        if(pos_x > 130  && pos_x < 205 && pos_y > 335 && pos_y < 415){
+        if(pos_x > 135  && pos_x < 215 && pos_y > 310 && pos_y < 380 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 0;
-            printf("0");
+            printf("0\n");
             continue;
         }   //0
             
-        else if(pos_x > 35   && pos_x < 115 && pos_y > 245 && pos_y < 325){
+        else if(pos_x > 45   && pos_x < 130 && pos_y > 60 && pos_y < 140 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 1;
-            printf("1");
+            printf("1\n");
             continue;
         }   //1
             
-        else if(pos_x > 130  && pos_x < 205 && pos_y > 245 && pos_y < 325){
+        else if(pos_x > 135  && pos_x < 215 && pos_y > 60 && pos_y < 140 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 2;
-            printf("2");
+            printf("2\n");
             continue;
         }   //2
             
-        else if(pos_x > 220  && pos_x < 300 && pos_y > 245 && pos_y < 325){
+        else if(pos_x > 225  && pos_x < 310 && pos_y > 60 && pos_y < 140 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 3;
-            printf("3"); 
+            printf("3\n"); 
             continue;
         }   //3
             
-        else if(pos_x > 35   && pos_x < 115 && pos_y > 145 && pos_y < 225){
+        else if(pos_x > 45   && pos_x < 130 && pos_y > 150 && pos_y < 220 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 4;
-            printf("4");
+            printf("4\n");
             continue;
         }   //4
             
-        else if(pos_x > 130  && pos_x < 205 && pos_y > 145 && pos_y < 225){
+        else if(pos_x > 135  && pos_x < 215 && pos_y > 150 && pos_y < 220 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 5;
-            printf("5");
+            printf("5\n");
             continue;
         }   //5
             
-        else if(pos_x > 220  && pos_x < 300 && pos_y > 145 && pos_y < 225){
+        else if(pos_x > 225  && pos_x < 310 && pos_y > 150 && pos_y < 220 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 6;
-            printf("6");
+            printf("6\n");
             continue;
         }   //6
             
-        else if(pos_x > 35   && pos_x < 115 && pos_y > 55  && pos_y < 130){
+        else if(pos_x > 45   && pos_x < 130 && pos_y > 230  && pos_y < 300 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 7;
-            printf("7");
+            printf("7\n");
             continue;
         }   //7
             
-        else if(pos_x > 130  && pos_x < 205 && pos_y > 55  && pos_y < 130){
+        else if(pos_x > 135  && pos_x < 215 && pos_y > 230  && pos_y < 300 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 8;
-            printf("8");
+            printf("8\n");
             continue;
         }   //8
             
-        else if(pos_x > 220  && pos_x < 230 && pos_y > 55  && pos_y < 130){
+        else if(pos_x > 225  && pos_x < 310 && pos_y > 230  && pos_y < 300 && tc_state.end_pos.x){
             pos_x = 0;
             pos_y = 0; 
             input_num[i++] = 9;
-            printf("9");
+            printf("9\n");
             continue;
         }   //9   
 
@@ -660,9 +660,7 @@ flag_lock:
         }
         if(!flag){
             return true;
-        }
-            
-        else
+        }else
             goto flag_lock;
 }
 

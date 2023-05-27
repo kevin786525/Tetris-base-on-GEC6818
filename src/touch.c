@@ -72,48 +72,36 @@ void * touch_fun(void * arg){
         if(pos_buf.type == EV_KEY && pos_buf.code == BTN_TOUCH && pos_buf.value > 0){      //摁下
             tc_state.start_pos.x = pos_x;
             tc_state.start_pos.y = pos_y;
+            tc_state.end_pos.x = 0;
+            tc_state.end_pos.y = 0;
             tc_state.x_ready = true;
             tc_state.y_ready = true;
         }else if( pos_buf.type == EV_KEY && pos_buf.code == BTN_TOUCH && pos_buf.value == 0){     //松手
             tc_state.end_pos.x = pos_x;
             tc_state.end_pos.y = pos_y;
+            tc_state.start_pos.x = 0;
+            tc_state.start_pos.y = 0;
             tc_state.x_ready = false;
             tc_state.y_ready = false;
         }
-        // if(pos_buf.type == EV_SYN && pos_x && pos_y){                         //每分割一次数据包就更新一次坐标差
-        //     // printf("当前坐标:(%d,%d)\n", pos_x, pos_y);
-        //     if(pos_x > pre_x){
-        //         tc_state.r_slide = true;
-        //         tc_state.l_slide = false;
-        //         x_diff = pos_x - pre_x;
-        //     }       
-        //     else if(pos_x < pre_x){
-        //         tc_state.r_slide = false;
-        //         tc_state.l_slide = true;
-        //     }  
-        //     pre_x = pos_x;
-        // }
     }
 }
 
 
 
 void slide_right2left(){
-    printf("进来了了右滑图片函数\n");
     int (* dst)[WIDTH] = (int (*)[WIDTH])map;
     int (* src)[3*WIDTH] = (int (*)[3*WIDTH])reserve_mem;
     for(int j = 0; j < HEIGHT; j++){
         //左边出图
         for(int i = 0; i < pos_x; i++){
             // memcpy( (dst + ((j) * WIDTH + i)), (reserve_mem + (j*2400 + (WIDTH-pos_x+i))), 4);
-            dst[j][i] = src[j][WIDTH-pos_x+i];
-            // dst[j][i] = src[j][WIDTH-pos_x+i];
+            dst[j][i] = src[j][WIDTH-pos_x+i];      //使用元素直接赋值比内存拷贝的效果要好
         }
         //右边消图
         for(int i = 0; i < WIDTH-pos_x; i++){
             // memcpy( (map + (j*WIDTH + pos_x+i)), (reserve_mem + j*2400 + 800+i), 4);
             dst[j][pos_x + i] = src[j][800+i];
-            // dst[j][pos_x + i] = src[j][800+i];
         }
 #if DEBUG
         for(int i = 0; i < WIDTH; i++){
@@ -124,7 +112,6 @@ void slide_right2left(){
 }
 
 void slide_left2right(){
-    printf("进来了了左滑图片函数\n");
     int (* dst)[WIDTH] = (int (*)[WIDTH])map;
     int (* src)[3*WIDTH] = (int (*)[3*WIDTH])reserve_mem; 
 

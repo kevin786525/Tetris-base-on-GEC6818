@@ -251,7 +251,7 @@ void display_node(P_node now){
         for(int x = 0; x < bmp_info.width; x++)
             if(x > 0 && x < 799 && y > 0 && y < 479)
                 *(map + x + y*800) = lcd_buf[y][x];
-    ioctl(fd_lcd, FBIOPAN_DISPLAY, &varinfo);
+    // ioctl(fd_lcd, FBIOPAN_DISPLAY, &varinfo);
 
     
 #if DEBUG
