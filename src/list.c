@@ -124,14 +124,19 @@ P_node get_prev_node(P_node node, P_node List){
 P_node handle_list(P_node bmpList, P_node mainList){
 
     P_node tmp = NULL;
-    printf("函数--->%s\t行号--->%d\n", __FUNCTION__, __LINE__);
     list_for_each_entry(tmp, &mainList->ptr, ptr){
         //跳过非bmp类型的节点以及桌面图片
-        printf("函数--->%s\t行号--->%d\n", __FUNCTION__, __LINE__);
         if(tmp->Data.type != 'b')   continue;
-        if( (strstr(tmp->Data.name, "project")) || (strstr(tmp->Data.name, "lock"))
-                    || (strstr(tmp->Data.name, "music")) || (strstr(tmp->Data.name, "video")) || (strstr(tmp->Data.name, "back"))){
-            printf("函数--->%s\t行号--->%d\n", __FUNCTION__, __LINE__);
+        if(        (strstr(tmp->Data.name, "project"))      //跳过以下指定图片
+                || (strstr(tmp->Data.name, "lock"))
+                || (strstr(tmp->Data.name, "music")) 
+                || (strstr(tmp->Data.name, "video")) 
+                || (strstr(tmp->Data.name, "back"))
+                || (strstr(tmp->Data.name, "tetris"))
+                || (strstr(tmp->Data.name, "mypause"))
+                || (strstr(tmp->Data.name, "mystart"))
+                || (strstr(tmp->Data.name, "tetris_start"))
+            ){
             continue;
         }
         else {

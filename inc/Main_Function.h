@@ -19,6 +19,7 @@
 #include "bmp.h"
 #include "Kernel_List.h"
 #include "lcd.h"
+#include "tetris.h"
 
 
 
@@ -45,16 +46,6 @@ bool IS_MP3file(char * name);
 bool IS_AVI_file(char * name);
 
 
-
-//函数名:Display_node_photo()
-//功  能:显示节点图片
-void Display_node_photo(P_node );
-
-
-
-
-
-
 //函数名:play_music();
 //功  能:播放音乐
 void play_music(P_node my_list);
@@ -72,17 +63,7 @@ P_node last_song(P_node pos, P_node my_list);
 //功  能:寻找下一首mp3的节点
 P_node next_song(P_node pos, P_node my_list);
 
-//功  能:刷新时间
-void *flash_time(void * arg);
 
-//功  能:滚动刷新天气
-void *flash_weather(void * arg);
-
-//功  能:改变字体的背景
-void font_background(bitmap * bm, int x, int y);
-
-//功  能:读取天气预报文件
-void read_weather_forecast(char  argv[][128]);
 
 //功  能:开机的界面锁
 bool project_lock();

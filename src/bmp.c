@@ -30,6 +30,9 @@ extern struct touch_state tc_state;
 extern struct input_event pos_buf;
 
 
+//定义互斥锁全局变量
+pthread_mutex_t lock;
+
 //============================全局变量定义============================//
 
 
@@ -43,147 +46,6 @@ void mem_Init(void){                    //宽            高              色深
     }
 }
 
-
-//功  能:显示图片
-void Display_photos(P_node my_list, int * map){
-
-    if(IS_NULL(my_list))
-        printf("当前链表为空!\n");
-
-    P_node cur = NULL;
-    P_node nex = NULL;
-
-    //设定可见区
-    ioctl(fd_lcd, FBIOGET_VSCREENINFO, &varinfo); // 获取可变属性
-    varinfo.xoffset = 0;
-    varinfo.yoffset = 0;
-
-
-    list_for_each_entry_safe(cur, nex, &my_list->ptr, ptr){
-    
-        //首先打开图片  
-        FILE *fp_cur = fopen(cur->Data.name, "r"); //获取当前节点信息
-        //创建bmp头部信息结构体
-        struct bitmap_header bmp_head_cur;
-        memset(&bmp_head_cur, 0, sizeof(bmp_head_cur));
-
-        if( fread(&bmp_head_cur, sizeof(bmp_head_cur), 1, fp_cur) != 1 ){
-            perror("读取bmp_cur图片头部信息失败!");
-            return ;
-        }
-
-        //读取bmp的信息头
-        struct bitmap_info bmp_info_cur;
-        memset(&bmp_info_cur, 0, sizeof(bmp_info_cur));
-
-        if( fread(&bmp_info_cur, sizeof(bmp_info_cur), 1, fp_cur) != 1 ){
-            perror("读取bmp_cur图片信息头失败!");
-            return ;
-        }
-        
-        //打印当前图片部分信息
-        printf("当前图片名字为:%s\n", cur->Data.name);
-        printf("=====分割线=================分割线=====\n");
-        printf("\n");
-
-        //如果图片横向分辨率不为能被4整除的整数，则计算需要补齐的字节数(当前图片)
-        int polish_cur = 0;
-        if( (bmp_info_cur.width * 3) % 4 != 0 ){
-            polish_cur = 4 - ((bmp_info_cur.width * 3) % 4);
-        }
-        
-        // printf("---->当前行号:%d\n",__LINE__);
-        //开始读取当前图片像素点数据
-        int rgb_size_cur = (bmp_info_cur.width * 3 + polish_cur) * bmp_info_cur.height;
-        char rgb_buf_cur[rgb_size_cur];
-        if( fread(rgb_buf_cur, rgb_size_cur, 1, fp_cur) != 1 ){
-            perror("读取图片像素点数据失败!");
-            continue;
-        }
-
-        //当前图片合成像素点
-        int lcd_buf_cur [bmp_info_cur.height][bmp_info_cur.width];
-        for(int y = 0; y < bmp_info_cur.height; y++){
-            for(int x = 0; x < bmp_info_cur.width; x++){
-                lcd_buf_cur[bmp_info_cur.height - y -1][x] =    rgb_buf_cur[ (x+y*bmp_info_cur.width)*3 + 0 + y *polish_cur ] << 0  |
-                                                                rgb_buf_cur[ (x+y*bmp_info_cur.width)*3 + 1 + y *polish_cur ] << 8  |
-                                                                rgb_buf_cur[ (x+y*bmp_info_cur.width)*3 + 2 + y *polish_cur ] << 16 |
-                                                                0x00 << 24;
-            }
-        }
-        struct bitmap_header bmp_head_nex;
-        struct bitmap_info bmp_info_nex;
-        int lcd_buf_nex [bmp_info_nex.height][bmp_info_nex.width];
-
-        //如果下一张已经到头节点，则指向头节点的下一个节点，实现循环
-        if(&nex->ptr == &my_list->ptr)
-            nex = list_entry(my_list->ptr.next, typeof(*nex), ptr);
-
-        FILE *fp_nex = fopen(nex->Data.name, "r"); //获取当前节点的下一个节点的信息
-        memset(&bmp_head_nex, 0, sizeof(bmp_head_nex));
-        if( fread(&bmp_head_nex, sizeof(bmp_head_nex), 1, fp_nex) != 1 ){
-            perror("读取bmp_nex图片头部信息失败!");
-            return ;
-        }   
-        memset(&bmp_info_nex, 0, sizeof(bmp_info_nex));
-        if( fread(&bmp_info_nex, sizeof(bmp_info_nex), 1, fp_nex) != 1 ){
-            perror("读取bmp_nex图片信息头失败!");
-            return ;
-        }
-        //打印下一张图片部分信息
-        printf("下一张图片名字为:%s\n", nex->Data.name);
-        printf("=====分割线=================分割线=====\n");
-        printf("\n");
-
-        //如果图片横向分辨率不为能被4整除的整数，则计算需要补齐的字节数(下一张图片)
-        int polish_nex = 0;
-        if( (bmp_info_nex.width * 3) % 4 != 0 ){
-            polish_nex = 4 - ((bmp_info_nex.width * 3) % 4);
-        }
-        //开始读取下一张图片像素点数据
-        int rgb_size_nex = (bmp_info_nex.width * 3 + polish_nex) * bmp_info_nex.height;
-        char rgb_buf_nex[rgb_size_nex];
-        if( fread(rgb_buf_nex, rgb_size_nex, 1, fp_nex) != 1 ){
-            perror("读取图片像素点数据失败!");
-            continue;
-        }
-        //下一张图片合成像素点
-        for(int y = 0; y < bmp_info_nex.height; y++)
-            for(int x = 0; x < bmp_info_nex.width; x++)
-                lcd_buf_nex[bmp_info_nex.height - y -1][x] =    rgb_buf_nex[ (x+y*bmp_info_nex.width)*3 + 0 + y *polish_nex ] << 0  |
-                                                                rgb_buf_nex[ (x+y*bmp_info_nex.width)*3 + 1 + y *polish_nex ] << 8  |
-                                                                rgb_buf_nex[ (x+y*bmp_info_nex.width)*3 + 2 + y *polish_nex ] << 16 |
-                                                                0x00 << 24;
-        ioctl(fd_lcd, FBIOPAN_DISPLAY, &varinfo);
-        //首先将当前图片显示在A区
-        for(int y = 0; y < bmp_info_cur.height; y++)
-            for(int x = 0; x < bmp_info_cur.width; x++)
-                if(x > 0 && x < 799 && y > 0 && y < 479)
-                    *(map + x + y*800) = lcd_buf_cur[y][x];
-        sleep(1);
-
-        //将下一张图片画在b区
-        for(int y = 0; y < bmp_info_nex.height; y++)
-            for(int x = 0; x < bmp_info_nex.width; x++)
-                if(x > 0 && x < 799 && y > 0 && y < 479)
-                    *(map + x + (y+480)*800) = lcd_buf_nex[y][x];
-        sleep(1);
-
-        while(1){
-            if(varinfo.yoffset == 480)  break;
-            ioctl(fd_lcd, FBIOPAN_DISPLAY, &varinfo);
-            varinfo.yoffset+=1;
-            printf("当前y的偏移量为:%d\n", varinfo.yoffset);
-            // usleep(10);             //10μs
-            // usleep(100);            //100μs
-            // usleep(1000);           //1ms
-            usleep(10000);          //10ms
-            // usleep(100000);         //0.1s
-            // sleep(1);               //1s
-        }
-    }       
-
-}
 
 //功  能:读取bmp图片的54字节头部信息
 struct bitmap_info read_bmp_head(FILE * fp){
@@ -246,12 +108,12 @@ void display_node(P_node now){
                                                         0x00 << 24;
         }
     }
+
     //将图片显示在a区
     for(int y = 0; y < bmp_info.height; y++)
         for(int x = 0; x < bmp_info.width; x++)
-            if(x > 0 && x < 799 && y > 0 && y < 479)
                 *(map + x + y*800) = lcd_buf[y][x];
-    // ioctl(fd_lcd, FBIOPAN_DISPLAY, &varinfo);
+    
 
     
 #if DEBUG
@@ -637,13 +499,14 @@ P_node click2show(P_node cur){
             slide_left2right();
             if(tc_state.end_pos.x < 400 && tc_state.end_pos.x != 0){
                 //更新下一张图片并显示
-                printf("当前的end_pos.x = %d\n", tc_state.end_pos.x);
+                // printf("当前的end_pos.x = %d\n", tc_state.end_pos.x);
                 cur = get_next_node(cur, bmpList);
                 display_node(cur);
                 prepare_node(cur, 800, 480);
             }
         }   
     }
+    free(buf);
     return cur;
 }
 

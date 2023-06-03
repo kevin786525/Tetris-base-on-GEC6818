@@ -38,12 +38,7 @@ struct touch_state{
     bool l_slide;
 };
 
-enum direction {
-        UP, 
-        DOWN, 
-        RIGHT, 
-        LEFT
-    };
+
 
 
 #endif

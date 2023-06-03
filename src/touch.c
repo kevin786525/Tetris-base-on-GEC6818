@@ -83,6 +83,8 @@ void * touch_fun(void * arg){
             tc_state.start_pos.y = 0;
             tc_state.x_ready = false;
             tc_state.y_ready = false;
+            //松手时打印坐标检查互斥锁
+            // printf("松手坐标(%d,%d)\n", tc_state.end_pos.x, tc_state.end_pos.y);
         }
     }
 }
