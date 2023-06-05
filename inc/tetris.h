@@ -96,10 +96,11 @@ void tetris_game(P_node head);
 P_block set_Data();
 
 //保持方块下降
-void  down_block(void);
+void  down_block(P_node head);
 
 //随机生成方块
 void rand_block_data(P_block new); 
+
 
 //固化方块数据
 void solidify_data(void);
@@ -118,5 +119,15 @@ void down(int x);
 
 //检查游戏是否结束
 bool failed_game();
+
+//预判下落位置
+void prev_place();
+
+//线程函数，判断操作
+void * __option_block(void * args);
+
+
+//清理虚拟方块的痕迹
+void __clean_v_mark();
 
 #endif

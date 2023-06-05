@@ -136,6 +136,7 @@ P_node handle_list(P_node bmpList, P_node mainList){
                 || (strstr(tmp->Data.name, "mypause"))
                 || (strstr(tmp->Data.name, "mystart"))
                 || (strstr(tmp->Data.name, "tetris_start"))
+                || (strstr(tmp->Data.name, "confirm_reset"))
             ){
             continue;
         }

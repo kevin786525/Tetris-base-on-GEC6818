@@ -68,8 +68,6 @@ void main(int argc, char *argv[]){
 
     play_tetris(my_list);
 
-    //进入屏幕操作系统
-    // my_system(my_list);
 
 #endif
 

@@ -4,6 +4,7 @@
 
 //由于线程原因，因此不得不定义一个共享资源定位全局变量
 extern Block g_block;
+extern Block v_block;
 extern int block[BLOCK_COUNT * 4][WIDTH_PIX][HEIGHT_PIX];
 extern int back_block[GAME_HEIGHT/CELL_PER_PIX][GAME_WIDTH/CELL_PER_PIX];
 
@@ -21,10 +22,26 @@ bool is_downable(){
     int line = g_block.x;
     for(int i = 0; i < WIDTH_PIX; i++){
         for(int j = 0; j < HEIGHT_PIX; j++){
-            if(block[id][i][j] == 1 && (back_block[row+j+1][line+i] == 1) ){
+            if((block[id][i][j] == 1) && (back_block[row+j+1][line+i] == 1) ){
                 //一旦产生了下降碰撞，就固化数据
                 solidify_data();
+                __clean_v_mark();
                 read_back_block();
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+//预判方块判断是否发生碰撞
+bool v_is_downable(){
+    int id   = v_block.cate*4+v_block.dir;
+    int row  = v_block.y;
+    int line = v_block.x;
+    for(int i = 0; i < WIDTH_PIX; i++){
+        for(int j = 0; j < HEIGHT_PIX; j++){
+            if((block[id][i][j] == 1) && (back_block[row+j+1][line+i] == 1)){
                 return false;
             }
         }
@@ -72,9 +89,7 @@ bool is_L_moveable(){
 
 //判断是否可以旋转
 bool handle_rotate(){
-    // if(!is_downable()){
-    //     return false;
-    // }
+
     int id   = g_block.cate*4+g_block.dir;
     int row  = g_block.y;
     int line = g_block.x;
@@ -82,7 +97,6 @@ bool handle_rotate(){
         for(int j = 0; j < HEIGHT_PIX; j++){
             //如果是旋转过后与墙发生重叠，则回退一格
             if(block[id][i][j] == 1 && ((back_block[row+j][line+i] == 1)) && g_block.x <= 0 ){
-                // printf("不能旋转...\n");
                 pthread_mutex_lock(&lock);
                 g_block.x++;
                 pthread_mutex_unlock(&lock);
@@ -100,17 +114,3 @@ bool handle_rotate(){
     return true;
 }   
 
-
-//判断是否可以旋转
-bool is_rotate(){
-    int id   = g_block.cate*4+g_block.dir;
-    int row  = g_block.y;
-    int line = g_block.x;
-    for(int i = 0; i < WIDTH_PIX; i++){
-        for(int j = 0; j < HEIGHT_PIX; j++){
-            if(block[id][i][j] == 1 && (back_block[row+j][line+i] == 1)){
-
-            }
-        }
-    }
-}

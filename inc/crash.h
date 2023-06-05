@@ -20,5 +20,8 @@ bool is_L_moveable();
 //处理方块与墙旋转问题
 bool handle_rotate();
 
-//判断是否可以旋转
-bool is_rotate();
+// //判断是否可以旋转
+// bool is_rotate();
+
+//预判方块判断是否发生碰撞
+bool v_is_downable();
