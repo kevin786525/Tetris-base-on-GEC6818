@@ -15,6 +15,7 @@
 #include "commonheader.h"
 #include "Kernel_List.h"
 #include "my_types.h"
+#include "tetris.h"
 
 //函数名:List_Init()
 //功  能:初始化双向链表

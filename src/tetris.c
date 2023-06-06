@@ -1,6 +1,8 @@
 #include "tetris.h"
 
+
 //============================全局变量定义============================//
+
 
 //由于线程原因，因此不得不定义一个共享资源定位全局变量
 Block g_block;
@@ -82,14 +84,25 @@ pthread_mutex_t lock;
 pthread_cond_t cond;
 P_node Start;
 P_node Pause;
+P_node record_list;
 
 volatile bool pause_flag = false;
 volatile bool reset_game = false;
 volatile bool start_game = true;
+volatile int speed = 500;                //方块下降的默认初始速度
+
+static int music_flag = 0;      //播放音乐标志位 
+static int score = 0;
+
 
 
 //============================全局变量定义============================//
 
+
+//线程取消处理函数
+void  __handler(void * args){
+    pthread_mutex_unlock((pthread_mutex_t *)args);
+}
 
 //让指定格子填充颜色
 void __set_cell_color(int x, int y, int color){
@@ -126,14 +139,6 @@ void __set_v_cell(int x, int y, int color){
     }
 }
 
-
-
-//线程函数，让虚拟格子一直保持复制真是格子的状态
-void * __copy_block(void * args){
-    while(1){
-        prev_place();
-    }
-}
 
 //设置墙壁数据
 void __set_wall_data(void){
@@ -264,68 +269,85 @@ void __clean_n_Mark(){
         }
 }
 
-
-//线程函数: 保持方块下降
-void * __down_block(void * args){
-    // Block t = *(Block *)args;
-    Block t;
-    t.cate = BLOCK_T;
-    t.dir = UP;
-    t.u32 = ORANGE;
-    t.x = 1;
-    t.y = 1;
-    set_Data(t);
-    while(t.x  > 1){
-        t.x--;
-        usleep(1000000);
-        set_Data(t);
-        __clean_mark(t, CLEAN_RIGHT);
-    }
-}
-
-void __pthread_down_block(void){
-    pthread_t b_tid;
-    pthread_mutex_init(&lock, NULL);
-    // pthread_create(&b_tid, NULL, down_block, (void *)&t);
-    pthread_create(&b_tid, NULL, __down_block, NULL);
-    if( pthread_detach(b_tid) != 0){
-        perror("线程分离失败:");
-    }
-}
-
 void play_tetris(P_node head){
+    is_playing_video = true;
+    char str[256];
     unsigned long (*buf)[WIDTH] = calloc(1, SCREEN_SIZE * 4);
     P_node tetris_start = search_2_list(head, "tetris_start");
+    P_node choose_difficult = search_2_list(head, "choose_difficult");
     get_image(tetris_start, buf);
+    blind_window_in(fd_lcd, buf);
+
+    //初始化记录分数的链表
+    record_list = List_Init();
+
+    //播放音乐
+    P_node bgm = search_2_list(head, "bgm");
+    printf("开始播放音乐:%s\n", bgm->Data.name);
+    snprintf(str, 257, "madplay %s -r &", bgm->Data.name);
+    system(str);
+
     while(1){
-        blind_window_in(fd_lcd, buf);
-        if(pos_x > 30 && pos_x < 135 && pos_y > 180 && pos_y < 330){        //开始游戏
+        if(pos_x > 30 && pos_x < 135 && pos_y > 180 && pos_y < 330){        //难度选择
             pos_x = 0;
             pos_y = 0;
             start_game = true;
             printf("开始游戏\n");
             tetris_game(head);
+            blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 160 && pos_x < 260 && pos_y > 180 && pos_y < 330){        //历史成绩
             pos_x = 0;
             pos_y = 0;
+            printf("历史成绩\n");
+            char str[256] = "   排名    成绩\n    1      12\n    2      4\n    3      2\n";
+            font_pos_size_data(800, 480, 0, 0, str);
+            blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 285 && pos_x < 385 && pos_y > 180 && pos_y < 330){        //游戏说明
             pos_x = 0;
             pos_y = 0;
+            printf("游戏说明\n");
+            Bitmap_Font * bf = font_pos_size_data(800, 400, 0, 50, "俄罗斯方块怎么玩还要我教?问成哥去!\n");
+            blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 430 && pos_x < 530 && pos_y > 180 && pos_y < 330){        //退出游戏
             pos_x = 0;
             pos_y = 0;
+            printf("退出游戏\n");
+            //关闭音乐
+            system("killall -SIGKILL madplay");
+            is_playing_video = false;
+            break;
         }
         if(pos_x > 570 && pos_x < 670 && pos_y > 180 && pos_y < 330){        //隐藏福利
             pos_x = 0;
             pos_y = 0;
+            P_node good = search_2_list(head, "good2");
+            display_node(good);
+            sleep(2);
+            printf("隐藏福利\n");
+            blind_window_in(fd_lcd, buf);
         }
-        
-    }
-}
+        if(pos_x > 700 && pos_x < 800 && pos_y > 0 && pos_y < 70){          //暂停/播放音乐
+            pos_x = 0;
+            pos_y = 0;
+            //flag为偶数时继续播放
+            if( (music_flag % 2) == 0 && music_flag != 0){
+                printf("继续播放\n");
+                system("killall -SIGCONT madplay");
+            }
 
+            //flag为奇数时暂停播放
+            else if( (music_flag % 2) == 1 ){
+                printf("暂停播放\n");
+                system("killall -SIGSTOP madplay");
+            }
+            music_flag++;
+        }           
+    }
+    free(buf);
+}
 
 
 #if !TETRIS_DEBUG
@@ -333,11 +355,15 @@ void play_tetris(P_node head){
 void tetris_game(P_node head){
     unsigned long (*buf)[WIDTH] = calloc(1, SCREEN_SIZE * 4);
     P_node tetris_back = search_2_list(head, "tetris_back");
+    P_node num_once = search_2_list(head, "number0");
     get_image(tetris_back, buf);
     Pause  = search_2_list(head, "mypause");
     Start  = search_2_list(head, "mystart");
     blind_window_in(fd_lcd, buf);
     lcd_pos_size_pixel(Pause, 250, 30, 100, 100);
+    lcd_pos_size_pixel(num_once, 650, 320, 80, 48);
+    lcd_pos_size_pixel(num_once, 650, 370, 80, 48);
+    lcd_pos_size_pixel(num_once, 650, 420, 80, 48);
 
     //设置随机种子
     srand((unsigned)time(NULL));
@@ -510,7 +536,7 @@ P_block set_Data(){
 
 
 void * __option_block (void * args){
-    
+    pthread_cleanup_push(__handler, (void *)&lock);
     while(1){
         if(pos_x > 390 && pos_x < 450 && pos_y > 10 && pos_y < 110){        //重启游戏
             pos_x = 0;
@@ -526,6 +552,12 @@ void * __option_block (void * args){
             pause_flag = true;
             lcd_pos_size_pixel(Start, 250, 30, 100, 100);
             pthread_exit(NULL);                 //游戏暂停之后退出本条线程
+        }
+        if(pos_x > 0 && pos_x < 530 && pos_y > 185 && pos_y < 455){          //加速方块
+            pos_x = 0;
+            pos_y = 0;
+            printf("加速\n");
+            speed = 20;
         }
         if(pos_x > 560 && pos_x < 640 && pos_y > 0 && pos_y < 70){          //右移方块
             printf("右移方块\n");
@@ -624,6 +656,18 @@ void * __option_block (void * args){
             pos_x = 0;
             pos_y = 0;
             printf("关闭音乐\n");
+            //flag为偶数时继续播放
+            if( (music_flag % 2) == 0 && music_flag != 0){
+                printf("继续播放\n");
+                system("killall -SIGCONT madplay");
+            }
+
+            //flag为奇数时暂停播放
+            else if( (music_flag % 2) == 1 ){
+                printf("暂停播放\n");
+                system("killall -SIGSTOP madplay");
+            }
+            music_flag++;
         }
         if(pos_x > 740 && pos_x < 800 && pos_y > 90 && pos_y < 145){         //退出游戏
             pos_x = 0;
@@ -634,6 +678,7 @@ void * __option_block (void * args){
             pthread_exit(NULL);
         }
     }
+    pthread_cleanup_pop(0);
 }
 
 
@@ -647,15 +692,13 @@ void  down_block(P_node head){
     pthread_create(&op_tid, NULL, __option_block, NULL);
     pthread_detach(op_tid);
 
-    // pthread_create(&rs_tid, NULL, __copy_block, NULL);
-    // pthread_detach(rs_tid);
 
     memset(&n_block, 0, sizeof(Block));
     rand_block_data(&n_block);
     while(start_game){
         //判断是否重启游戏
         if(reset_game){
-            int * tmp =  calloc(1, HEIGHT*WIDTH*4); //用于暂存游戏的所有背景数据
+            int * tmp =  calloc(1, HEIGHT*WIDTH*4);                                 //用于暂存游戏的所有背景数据
             memcpy(tmp, map, HEIGHT*WIDTH*4);
             lcd_pos_size_pixel(con, 135, 185, 400, 240);
             pause_flag = true;                                                      //先暂停游戏
@@ -663,6 +706,9 @@ void  down_block(P_node head){
                 if(pos_x > 330 && pos_x < 365 && pos_y > 310 && pos_y < 415){       //确认
                     pos_x = 0;
                     pos_y = 0;
+                    score = 0;
+                    speed = 500;                                                              //重设分数
+                    updateScore(head);      //更新分数显示
                     pthread_create(&op_tid, NULL, __option_block, NULL);            //重新开始游戏时重新打开线程
                     pthread_detach(op_tid);
                     memcpy(map, tmp, HEIGHT*WIDTH*4);                               //将原本的数据画面还原
@@ -716,8 +762,20 @@ void  down_block(P_node head){
 
         read_block_data();
 
-        check();                //每次产生新方块之前都判断一下最后一行方块是否需要消除
-        if(failed_game()){
+        check(head);                //每次产生新方块之前都判断一下最后一行方块是否需要消除
+
+        //判断游戏失败
+        if(failed_game()){                                                          
+            memset(&g_block, 0, sizeof(Block));
+            memset(&n_block, 0, sizeof(Block));
+            memset(&v_block, 0, sizeof(Block));
+                                                                         
+            //取消操作线程
+            pthread_cancel(op_tid);
+            font_pos_size_data(400, 240, 100, 100, "游戏结束");
+            // record_score();
+            score = 0;//重设分数
+            speed = 500;
             break;
         }
         while(is_downable() && handle_rotate() && !pause_flag && !reset_game && start_game){
@@ -731,7 +789,7 @@ CONT:
             pthread_mutex_unlock(&lock);
             prev_place();
 
-            usleep(500*ONE_MS);     //方块下降速度  300ms
+            usleep(speed*ONE_MS);     //方块下降速度  500ms
         }
         
     }
@@ -740,10 +798,6 @@ CONT:
 
 //预判下落位置
 void prev_place(){
-    // v_block.y = 0;
-    int id = v_block.cate*4 + v_block.dir;
-    int back_width = GAME_WIDTH/CELL_PER_PIX;       //横格子数
-    int back_height = GAME_HEIGHT/CELL_PER_PIX-5;     //竖格子数
     while(v_is_downable()){
         v_block.y++;
     }
@@ -808,13 +862,14 @@ bool failed_game(){
     if(g_block.y == 0 && !is_downable()){
         // set_Data();
         printf("游戏结束!\n");
+        set_Data();
         return true;
     }
     return false;
 }
 
 //检查是否需要消行
-void check(){
+void check(P_node head){
     
     for(int i = GAME_HEIGHT/CELL_PER_PIX-2; i >= 0; i--){
         for(int j = 0; j < GAME_WIDTH/CELL_PER_PIX && back_block[i][j]; j++){
@@ -822,9 +877,13 @@ void check(){
                 printf("%d行数据需要清理\n", i);
                 down(i);
                 i++;
+                score+=2;
             }
         }
     }
+    updateScore(head);      //更新分数显示
+    updataSpeed();          //更新下降速度
+    printf("分数已更新\n");
 }
 
 
@@ -845,3 +904,83 @@ void down(int x){
 }
 
 
+//更新游戏分数
+void updateScore(P_node head){
+    P_node tmp_pic;
+    int tmp = score;
+    int data[3] = {0};  //0:百   1:十   2:个
+    char num_pic[10][20] = {{"number0"}, {"number1"}, {"number2"}, {"number3"}, {"number4"}, {"number5"}, {"number6"}, {"number7"}, {"number8"}, {"number9"}, };
+    int i = 0;
+    while((tmp) != 0){
+        data[i++] = tmp % 10;
+        tmp/=10;
+    }
+    for(i = 0; i < 3; i++){
+        printf("data[%d]:%d\t要打开的图片:%s\n", i, data[i], (char*)num_pic[data[i]]);
+        tmp_pic = search_2_list(head, (char*)num_pic[data[i]]);
+        printf("打开图片\n");
+        lcd_pos_size_pixel(tmp_pic, 650, 320+(i*50), 80, 48);
+    }
+}
+
+//更新下降速度
+void updataSpeed(){
+    if(score >= 10 ){
+        speed = 300;
+    }
+    else if(score >= 20){
+        speed = 200;
+    }else if(score >= 50){
+        speed = 100;
+    }else if(score >= 75){
+        speed = 50;
+    }else if(score >= 100){
+        speed = 1;
+    }
+}
+
+
+//功  能:展示链表内容
+void __show_list(P_node my_list){
+
+    if( (IS_NULL(my_list)) ){
+        printf("链表异常!\n");
+        return ;
+    }
+    P_node tmp = NULL;
+    list_for_each_entry(tmp, &my_list->ptr, ptr){
+
+        printf("分数:%d\n", tmp->Data.reco.Score);
+    }
+
+}
+
+//记录分数
+void record_score(){
+    data_type tmp;
+    memset(&tmp, 0, sizeof(Node));
+    tmp.reco.Score = score;
+    tmp.reco.N_O   = 1;
+    //创建新节点
+    P_node new = new_node(tmp);
+    //将节点存进链表
+    node_2_list(record_list, new, 2);
+    __show_list(record_list);
+    flush_score2file();
+}
+
+//将分数记录到文件中
+void flush_score2file(){
+    FILE * p = fopen(USR_LOAD, "a+");
+    if(p == NULL){
+        perror("fopen:");
+        return ;
+    }
+    // fwrite()
+    P_node tmp;
+    list_for_each_entry(tmp, &record_list->ptr, ptr){
+        printf("当前节点的数据:%d\n", tmp->Data.reco.Score);
+        fwrite(tmp, sizeof(Node), 1, p);
+    }
+    fclose(p);
+}

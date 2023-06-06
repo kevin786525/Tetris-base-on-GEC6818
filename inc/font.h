@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #define color u32
 #define getColor(a, b, c, d) (a|b<<8|c<<16|d<<24)
+#define FONT_TTF	"/usr/share/fonts/simfang.ttf"
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -56,6 +57,11 @@ struct LcdDevice
 
 };
 
+typedef struct{
+	font * f;
+	bitmap * b;
+}Bitmap_Font;
+
 
 //1.初始化字库 
 font *fontLoad(char *fontPath);
@@ -81,5 +87,16 @@ void fontUnload(font *f);
 
 // 关闭bitmap
 void destroyBitmap(bitmap *bm);
+
+/* 
+* 在指定位置显示指定大小的内容
+* 参  数: 
+*	@bm_width:	画板的宽
+*	@bm_height: 画板的高
+*	@x:         画板的出现x坐标
+*	@y:         画板出现的y坐标
+*	@str:       文本内容
+ */	
+Bitmap_Font * font_pos_size_data(int bm_width, int bm_height, int x, int y, char * str);
 
 #endif

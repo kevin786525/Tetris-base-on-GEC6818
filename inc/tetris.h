@@ -8,6 +8,9 @@
 #include "list.h"
 #include "head4animation.h"
 #include "crash.h"
+#include "font.h"
+
+#define USR_LOAD "./usr/user_record.txt"
 
 //下降速度
 #define ONE_S   1000000     //1秒
@@ -20,7 +23,7 @@
 #define HEIGHT_PIX      5       //竖向格子数
 #define CELL_PER_PIX    20      //每个格子占像素点数
 #define GAME_WIDTH      320     //游戏宽度（像素点）
-#define GAME_HEIGHT     600     //游戏高度（像素点）
+#define GAME_HEIGHT     600     //游戏高度（像素点）以上使用全局变量来完成游戏设计
 
 #define RED     0x00ED1C24      //红
 #define CYAN    0x000EF717      //青
@@ -85,7 +88,6 @@ typedef struct block{
 }Block, *P_block;
 
 
-
 //俄罗斯方块游戏
 void play_tetris(P_node head);
 
@@ -101,7 +103,6 @@ void  down_block(P_node head);
 //随机生成方块
 void rand_block_data(P_block new); 
 
-
 //固化方块数据
 void solidify_data(void);
 
@@ -112,7 +113,7 @@ void read_back_block();
 void read_block_data();
 
 //检查是否需要消行
-void check();
+void check(P_node head);
 
 //消除某行方块，并且从上往下降落方块
 void down(int x);
@@ -127,7 +128,22 @@ void prev_place();
 void * __option_block(void * args);
 
 
+//线程取消处理函数
+void  __handler(void * args);
+
 //清理虚拟方块的痕迹
 void __clean_v_mark();
+
+//更新游戏分数
+void updateScore(P_node head);
+
+//更新下降速度
+void updataSpeed();
+
+//记录分数
+void record_score();
+
+//将分数记录到文件中
+void flush_score2file();
 
 #endif

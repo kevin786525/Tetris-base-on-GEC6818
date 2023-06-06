@@ -102,12 +102,12 @@ void main(int argc, char *argv[]){
         perror("触摸屏线程分离失败:");
     }   
 
-    // //创建线程运行状态栏函数
-    // pthread_t time_tid;
-    // pthread_create(&time_tid, NULL, flash_time, NULL);
-    // if( pthread_detach(time_tid) != 0){
-    //     perror("时间状态栏线程分离失败:");
-    // }
+    //创建线程运行状态栏函数
+    pthread_t time_tid;
+    pthread_create(&time_tid, NULL, flash_time, NULL);
+    if( pthread_detach(time_tid) != 0){
+        perror("时间状态栏线程分离失败:");
+    }
     
     //进入屏幕操作系统
     my_system(my_list);

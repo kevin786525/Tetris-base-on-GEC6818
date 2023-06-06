@@ -80,7 +80,7 @@ void display_node(P_node now){
     change_bmp = true;
     
     //打开图片  
-    printf("当前需要打开的图片是---->%s\n",now->Data.name);
+    // printf("当前需要打开的图片是---->%s\n",now->Data.name);
     FILE *fp = fopen(now->Data.name, "r");
     struct bitmap_info bmp_info;
     bmp_info = read_bmp_head(fp);
@@ -110,10 +110,11 @@ void display_node(P_node now){
     }
 
     //将图片显示在a区
+    pthread_mutex_lock(&lock);
     for(int y = 0; y < bmp_info.height; y++)
         for(int x = 0; x < bmp_info.width; x++)
                 *(map + x + y*800) = lcd_buf[y][x];
-    
+    pthread_mutex_unlock(&lock);
 
     
 #if DEBUG
@@ -171,6 +172,7 @@ void show_album(P_node my_list){
             pos_y = 0;
         }
     }
+
 }
 
 #if VERSION
@@ -412,7 +414,7 @@ int * lcd_pos_size_pixel(P_node node, const unsigned int x, const unsigned int y
     change_bmp = true;
     
     //打开图片  
-    printf("当前需要打开的图片是---->%s\n",node->Data.name);
+    // printf("当前需要打开的图片是---->%s\n",node->Data.name);
     FILE *fp = fopen(node->Data.name, "r");
     struct bitmap_info bmp_info;
     bmp_info = read_bmp_head(fp);
@@ -449,7 +451,9 @@ int * lcd_pos_size_pixel(P_node node, const unsigned int x, const unsigned int y
                 *(map + i+x + (j+y)*800) = lcd_buf[j][i];
 
     int * tmp = calloc(1, height * width * 4);
+    pthread_mutex_lock(&lock);
     memcpy(tmp, lcd_buf, height * width * 4);
+    pthread_mutex_unlock(&lock);
     return tmp;
     // ioctl(fd_lcd, FBIOPAN_DISPLAY, &varinfo);
 
@@ -459,6 +463,8 @@ int * lcd_pos_size_pixel(P_node node, const unsigned int x, const unsigned int y
 //功  能: 点击放大图片
 P_node click2show(P_node cur){
 
+    //暂停显示状态栏
+    is_playing_video = true;
 
     //初始化随机数种子
     srand((int)time(NULL));
@@ -483,6 +489,7 @@ P_node click2show(P_node cur){
             printf("退出放大!\n");
             pos_x = 0;
             pos_y = 0;
+            is_playing_video = false;
             break;
         }
         if(tc_state.start_pos.x < 400 && tc_state.x_ready && tc_state.y_ready && pos_buf.type == EV_SYN){

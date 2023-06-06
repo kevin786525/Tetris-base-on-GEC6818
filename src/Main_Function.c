@@ -233,8 +233,9 @@ flag:
             {
                 pos_x = 0;
                 pos_y = 0;
-                play_tetris(my_list);
                 printf("打开俄罗斯方块游戏\n");
+                play_tetris(my_list);
+                display_node(proj);
             }
             //锁屏，返回锁界面
             else if(pos_x > 700 && pos_x < 800 && pos_y > 0 && pos_y < 85){
@@ -256,7 +257,6 @@ void play_music(P_node my_list){
     P_node music_pause = search_2_list(my_list, "music_pause");
     //找到第一个音乐文件
     P_node first_music = search_2_list(my_list, "1.mp3");
-    // lcd_pos_size_pixel(music_play, 0, 0, 800, 480);
     display_node(music_play);
     
     //控制播放暂停标志位
@@ -345,7 +345,6 @@ void play_video(P_node my_list){
     int flag = 0;
     char str[257];
     memset(str, 0, 257);
-    // lcd_pos_size_pixel(video_bmp, 0, 0, 800, 480);
     display_node(video_bmp);
 
     while(1){

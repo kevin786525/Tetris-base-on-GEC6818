@@ -65,7 +65,7 @@ bool IS_NULL(P_node check){
 //功  能:展示链表内容
 void show_list(P_node my_list){
 
-    printf("这里是%s函数,第%d行\n", __FUNCTION__, __LINE__);
+    // printf("这里是%s函数,第%d行\n", __FUNCTION__, __LINE__);
 
     if( (IS_NULL(my_list)) ){
         printf("链表异常!\n");
@@ -120,6 +120,7 @@ P_node get_prev_node(P_node node, P_node List){
 }
 
 
+
 //功  能: 将要显示的图片从主链表中分离到单独的链表中
 P_node handle_list(P_node bmpList, P_node mainList){
 
@@ -137,6 +138,9 @@ P_node handle_list(P_node bmpList, P_node mainList){
                 || (strstr(tmp->Data.name, "mystart"))
                 || (strstr(tmp->Data.name, "tetris_start"))
                 || (strstr(tmp->Data.name, "confirm_reset"))
+                || (strstr(tmp->Data.name, "choose_difficult"))
+                || (strstr(tmp->Data.name, "good2"))
+                || (strstr(tmp->Data.name, "number"))
             ){
             continue;
         }
@@ -152,6 +156,9 @@ P_node handle_list(P_node bmpList, P_node mainList){
     show_list(bmpList);
     return bmpList;
 }
+
+
+
 
 
 
