@@ -5,13 +5,13 @@
 
 
 //由于线程原因，因此不得不定义一个共享资源定位全局变量
-Block g_block;
-Block n_block;
-Block v_block;
+Block g_block;          //当前方块
+Block n_block;          //下一块方块
+Block v_block;          //预判方块
 
 //伪状态机
-extern bool change_bmp;
-extern bool is_playing_video;
+extern bool change_bmp;             //
+extern bool is_playing_video;       //标志状态栏（不显示）
 
 
 extern int fd_lcd;
@@ -78,7 +78,7 @@ int markColor[GAME_HEIGHT/CELL_PER_PIX][GAME_WIDTH/CELL_PER_PIX];   //背景颜�
 
 int Color[7] = {RED, CYAN, BLUE, YELLOW, ORANGE};
 char Cate[7][10]  = {"I型", "田字型", "T字型", "RL型", "LL型", "RZ型", "LZ型"};
-char Dir[4][10]   = {"上", "右", "下", "左"};
+char Dir[4][4]   = {"上", "右", "下", "左"};
 
 pthread_mutex_t lock;
 pthread_cond_t cond;
@@ -86,12 +86,12 @@ P_node Start;
 P_node Pause;
 P_node record_list;
 
-volatile bool pause_flag = false;
-volatile bool reset_game = false;
-volatile bool start_game = true;
-volatile int speed = 500;                //方块下降的默认初始速度
+volatile bool pause_flag = false;       //标志播放/暂停
+volatile bool reset_game = false;       //标志重启
+volatile bool start_game = true;        //标志游戏启动
+volatile int speed = 500;               //方块下降的默认初始速度
 
-static int music_flag = 0;      //播放音乐标志位 
+static int music_flag = 0;              //播放音乐标志位 
 static int score = 0;
 
 
@@ -106,11 +106,6 @@ void  __handler(void * args){
 
 //让指定格子填充颜色
 void __set_cell_color(int x, int y, int color){
-    /* for(int i = 1; i < WIDTH_PIX*4; i++){
-        for(int j = 1; j < HEIGHT_PIX*4; j++){
-            *(tmp + (HEIGHT-((x+1)*WIDTH_PIX)*4 + i)*WIDTH + y*HEIGHT_PIX*4 + j) = color;
-        }
-    } */
     int h = HEIGHT_PIX*4;
     int w = WIDTH_PIX*4;
     for(int i = 0; i < w; i++){
@@ -124,7 +119,7 @@ void __set_cell_color(int x, int y, int color){
     }
 }
 
-//画虚拟格子
+//画虚拟格子（预判格子）
 void __set_v_cell(int x, int y, int color){
     int h = HEIGHT_PIX*4;
     int w = WIDTH_PIX*4;
@@ -146,7 +141,7 @@ void __set_wall_data(void){
     int back_height = GAME_HEIGHT/CELL_PER_PIX;
     for(int i = 0; i < back_height; i++){
         for(int j = 0; j < back_width; j++)
-            if( j == 0 || j == back_width-1 || i == back_height-1){
+            if( j == 0 || j == back_width-1 || i == back_height-1){         //左下右墙壁数据设为1
                 back_block[i][j] = 1;
             }else{
                 back_block[i][j] = 0;
@@ -187,15 +182,15 @@ void read_back_block(){
 
 
 
-//画虚拟格子总成
+//画虚拟格子总成（5*5）
 void __draw_v_block(){
     int id = g_block.cate*4+g_block.dir;
     for(int i = 0; i < HEIGHT_PIX; i++){
         for(int j = 0; j < WIDTH_PIX; j++){
-            if(!block[id][i][j]){
+            if(!block[id][i][j]){                               //数据为0时为背景色
                 continue;
             }else{
-                __set_v_cell(v_block.x+i, v_block.y+j, WHITE);
+                __set_v_cell(v_block.x+i, v_block.y+j, WHITE);  //数据为1时画出边框
             }
         }
     }
@@ -206,9 +201,9 @@ void __draw_block(int cate, int dir){
     for(int i = 0; i < HEIGHT_PIX; i++){
         for(int j = 0; j < WIDTH_PIX; j++){
             if(!block[cate*4+dir][i][j]){
-                continue;
+                continue;                                                   //数据为0时为背景色
             }else{
-                __set_cell_color(g_block.x+i, g_block.y+j, g_block.u32);
+                __set_cell_color(g_block.x+i, g_block.y+j, g_block.u32);    //数据为1时画出方块
             }
         }
     }
@@ -230,7 +225,7 @@ void set_n_block(){
         }
 }
 
-//清理痕迹
+//清理当前方块的痕迹
 void __clean_mark(){
     for(int i = 1; i < HEIGHT_PIX; i++){
             for(int j = 1; j < WIDTH_PIX; j++){
@@ -270,13 +265,13 @@ void __clean_n_Mark(){
 }
 
 void play_tetris(P_node head){
-    is_playing_video = true;
+    is_playing_video = true;//将标志位设置为真，屏蔽状态栏
     char str[256];
     unsigned long (*buf)[WIDTH] = calloc(1, SCREEN_SIZE * 4);
     P_node tetris_start = search_2_list(head, "tetris_start");
     P_node choose_difficult = search_2_list(head, "choose_difficult");
     get_image(tetris_start, buf);
-    blind_window_in(fd_lcd, buf);
+    blind_window_in(fd_lcd, buf);           //百叶窗式显示图片
 
     //初始化记录分数的链表
     record_list = List_Init();
@@ -284,7 +279,7 @@ void play_tetris(P_node head){
     //播放音乐
     P_node bgm = search_2_list(head, "bgm");
     printf("开始播放音乐:%s\n", bgm->Data.name);
-    snprintf(str, 257, "madplay %s -r &", bgm->Data.name);
+    snprintf(str, 257, "madplay %s -r &", bgm->Data.name);                  //加上-r表示单曲循环
     system(str);
 
     while(1){
@@ -346,7 +341,7 @@ void play_tetris(P_node head){
             music_flag++;
         }           
     }
-    free(buf);
+    free(buf);//退出游戏时释放资源
 }
 
 
@@ -360,8 +355,8 @@ void tetris_game(P_node head){
     Pause  = search_2_list(head, "mypause");
     Start  = search_2_list(head, "mystart");
     blind_window_in(fd_lcd, buf);
-    lcd_pos_size_pixel(Pause, 250, 30, 100, 100);
-    lcd_pos_size_pixel(num_once, 650, 320, 80, 48);
+    lcd_pos_size_pixel(Pause, 250, 30, 100, 100);               //暂停的贴图
+    lcd_pos_size_pixel(num_once, 650, 320, 80, 48);             //三位数的计分贴图
     lcd_pos_size_pixel(num_once, 650, 370, 80, 48);
     lcd_pos_size_pixel(num_once, 650, 420, 80, 48);
 
@@ -372,12 +367,13 @@ void tetris_game(P_node head){
     __set_wall_data();
     //画出游戏墙壁
     __draw_wall();
+
 #if THREAD_DEBUG
     __pthread_down_block(); 
 #endif
 
     down_block(head);
-    free(buf);
+    free(buf);      //退出游戏时释放资源
 }
 #endif
 
@@ -536,14 +532,14 @@ P_block set_Data(){
 
 
 void * __option_block (void * args){
-    pthread_cleanup_push(__handler, (void *)&lock);
+    pthread_cleanup_push(__handler, (void *)&lock); //将线程取消处理函数压栈，防止死锁
     while(1){
         if(pos_x > 390 && pos_x < 450 && pos_y > 10 && pos_y < 110){        //重启游戏
             pos_x = 0;
             pos_y = 0;
             printf("重启游戏\n");
             reset_game = true;
-            pthread_exit(NULL);                 //关闭本次线程
+            pthread_exit(NULL);                 //重启游戏需要退出本次线程
         }
         if(pos_x > 250 && pos_x < 350 && pos_y > 10 && pos_y < 140){        //游戏暂停
             pos_x = 0;
@@ -551,7 +547,7 @@ void * __option_block (void * args){
             printf("游戏暂停...\n");
             pause_flag = true;
             lcd_pos_size_pixel(Start, 250, 30, 100, 100);
-            pthread_exit(NULL);                 //游戏暂停之后退出本条线程
+            pthread_exit(NULL);                 //游戏暂停之后退出本次线程
         }
         if(pos_x > 0 && pos_x < 530 && pos_y > 185 && pos_y < 455){          //加速方块
             pos_x = 0;
@@ -561,7 +557,7 @@ void * __option_block (void * args){
         }
         if(pos_x > 560 && pos_x < 640 && pos_y > 0 && pos_y < 70){          //右移方块
             printf("右移方块\n");
-            __clean_mark();                     //先清除方块痕迹
+            __clean_mark();                     //先清除方块痕迹以及预判方块的痕迹
             __clean_v_mark();
             g_block.x++;                        //再按照控制方向更新方块x，y数据
             if(is_R_moveable()){                //更新方块数据之后先判断是否会发生碰撞，如果发生了碰撞事件，则不进行数据更新操作
@@ -569,7 +565,7 @@ void * __option_block (void * args){
                 set_Data(g_block);
                 pthread_mutex_unlock(&lock);
                 memcpy(&v_block, &g_block, sizeof(Block));
-                prev_place();
+                prev_place();                   //如果更新了方块，则预判方块也随之更新
                 pos_x = 0;
                 pos_y = 0;
             }else{
@@ -648,7 +644,7 @@ void * __option_block (void * args){
             printf("速降方块\n");
             pthread_mutex_lock(&lock);
             __clean_mark();
-            memcpy(&g_block, &v_block, sizeof(Block));
+            memcpy(&g_block, &v_block, sizeof(Block));                      //直接将预判方块的数据更新到当前方块
             set_Data();
             pthread_mutex_unlock(&lock);
         }
@@ -687,8 +683,6 @@ void  down_block(P_node head){
 
     P_node con = search_2_list(head, "confirm_reset");
     pthread_t op_tid;       //操作线程
-    pthread_t cp_tid;       //虚拟方块复制线程
-    pthread_t rs_tid;
     pthread_create(&op_tid, NULL, __option_block, NULL);
     pthread_detach(op_tid);
 
@@ -706,9 +700,9 @@ void  down_block(P_node head){
                 if(pos_x > 330 && pos_x < 365 && pos_y > 310 && pos_y < 415){       //确认
                     pos_x = 0;
                     pos_y = 0;
-                    score = 0;
-                    speed = 500;                                                              //重设分数
-                    updateScore(head);      //更新分数显示
+                    score = 0;                                                      //重设分数 
+                    speed = 500;                                                     
+                    updateScore(head);                                              //更新分数显示
                     pthread_create(&op_tid, NULL, __option_block, NULL);            //重新开始游戏时重新打开线程
                     pthread_detach(op_tid);
                     memcpy(map, tmp, HEIGHT*WIDTH*4);                               //将原本的数据画面还原
@@ -737,13 +731,13 @@ void  down_block(P_node head){
         //判断是否暂停游戏
         if(pause_flag){
             while(1){
-                if(pos_x > 250 && pos_x < 350 && pos_y > 10 && pos_y < 110){    //开始游戏
+                if(pos_x > 250 && pos_x < 350 && pos_y > 10 && pos_y < 110){        //开始游戏
                     printf("游戏开始!\n");
                     lcd_pos_size_pixel(Pause, 250, 30, 100, 100);
                     pos_x = 0;
                     pos_y = 0;  
                     pause_flag = false;
-                    pthread_create(&op_tid, NULL, __option_block, NULL);    //重新开始游戏时重新打开线程
+                    pthread_create(&op_tid, NULL, __option_block, NULL);            //重新开始游戏时重新打开线程
                     pthread_detach(op_tid);
                     goto CONT;
                 }
@@ -751,14 +745,14 @@ void  down_block(P_node head){
             }
         }
 
-        //拷贝下一开方块的数据
+        //拷贝下一块方块的数据
         memcpy(&g_block, &n_block, sizeof(Block));
         memcpy(&v_block, &g_block, sizeof(Block));
         //拷贝完成后更新下一块方块
         memset(&n_block, 0, sizeof(Block));
         rand_block_data(&n_block);
-        __clean_n_Mark();
-        set_n_block();              //将下一块方块显示在指定位置
+        __clean_n_Mark();           //清楚下一块方块的痕迹
+        set_n_block();              //再将下一块方块显示在指定位置
 
         read_block_data();
 
@@ -774,10 +768,11 @@ void  down_block(P_node head){
             pthread_cancel(op_tid);
             font_pos_size_data(400, 240, 100, 100, "游戏结束");
             // record_score();
-            score = 0;//重设分数
-            speed = 500;
+            score = 0;      //重设分数
+            speed = 500;    //重置方块下降速度
             break;
         }
+                //判断碰撞      判断是否可选装     判断暂停游戏   判断重启游戏   游戏开始标志位
         while(is_downable() && handle_rotate() && !pause_flag && !reset_game && start_game){
             //主线程保持方块下落
 CONT:
@@ -789,7 +784,7 @@ CONT:
             pthread_mutex_unlock(&lock);
             prev_place();
 
-            usleep(speed*ONE_MS);     //方块下降速度  500ms
+            usleep(speed*ONE_MS);     //方块下降速度  500ms 随着游戏进行，速度会改变
         }
         
     }
@@ -844,7 +839,7 @@ void solidify_data(void){
     int back_height = GAME_HEIGHT / CELL_PER_PIX;
     int back_width  = GAME_WIDTH  / CELL_PER_PIX;
     int id = g_block.cate*4 + g_block.dir;
-    for(int i = 0; i < WIDTH_PIX; i++){       //背景格子的行数
+    for(int i = 0; i < WIDTH_PIX; i++){         //背景格子的行数
         for(int j = 0; j < HEIGHT_PIX; j++){    //背景格子的列数
             if(block[id][i][j]){
                 back_block[g_block.y+j][g_block.x+i] = 1;
@@ -860,9 +855,8 @@ void solidify_data(void){
 //检查游戏是否结束
 bool failed_game(){
     if(g_block.y == 0 && !is_downable()){
-        // set_Data();
         printf("游戏结束!\n");
-        set_Data();
+        set_Data();         //游戏结束也要画出最后一块方块
         return true;
     }
     return false;
@@ -875,9 +869,9 @@ void check(P_node head){
         for(int j = 0; j < GAME_WIDTH/CELL_PER_PIX && back_block[i][j]; j++){
             if(j >= GAME_WIDTH/CELL_PER_PIX-1){
                 printf("%d行数据需要清理\n", i);
-                down(i);
-                i++;
-                score+=2;
+                down(i);                            //从上而下整理方块
+                i++;                                //每次消完行之后再检查一次本行，因此需要i++ 
+                score+=2;                           //每消除一行分数＋2
             }
         }
     }
@@ -918,7 +912,6 @@ void updateScore(P_node head){
     for(i = 0; i < 3; i++){
         printf("data[%d]:%d\t要打开的图片:%s\n", i, data[i], (char*)num_pic[data[i]]);
         tmp_pic = search_2_list(head, (char*)num_pic[data[i]]);
-        printf("打开图片\n");
         lcd_pos_size_pixel(tmp_pic, 650, 320+(i*50), 80, 48);
     }
 }

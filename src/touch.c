@@ -12,14 +12,8 @@ extern int * reserve_mem;
 
 volatile unsigned long pos_x = 0;
 volatile unsigned long pos_y = 0;
-
-// volatile unsigned int in_x = 0;
-// volatile unsigned int in_y = 0; // 按下的坐标值
-// volatile unsigned int out_x = 0;
-// volatile unsigned int out_y = 0; // 松手坐标值
-volatile unsigned int pre_x = 0;
-
-volatile unsigned int x_diff = 0;
+// volatile unsigned int pre_x = 0;
+// volatile unsigned int x_diff = 0;
 
 struct touch_state tc_state;
 struct input_event pos_buf;
