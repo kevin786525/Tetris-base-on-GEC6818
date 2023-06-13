@@ -49,7 +49,7 @@ void fall_down(int lcd, unsigned long (*image)[WIDTH]){
 
 void get_image(P_node node, unsigned long (*buf)[WIDTH]){
 
-    printf("当前需要打开的图片是---->%s\n",node->Data.name);
+    // printf("当前需要打开的图片是---->%s\n",node->Data.name);
     FILE *fp = fopen(node->Data.name, "r");
     struct bitmap_info bmp_info;
     bmp_info = read_bmp_head(fp);

@@ -58,7 +58,7 @@ bool node_2_list(P_node my_list, P_node new, int mod){
 //功  能:判断节点是否为空
 //返回值:指向自己(为空)--->1
 //       不为空       --->0
-bool IS_NULL(P_node check){
+inline bool IS_NULL(P_node check){
     return list_empty(&check->ptr);
 }
 

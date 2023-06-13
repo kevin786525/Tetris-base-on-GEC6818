@@ -97,6 +97,6 @@ void destroyBitmap(bitmap *bm);
 *	@y:         画板出现的y坐标
 *	@str:       文本内容
  */	
-Bitmap_Font * font_pos_size_data(int bm_width, int bm_height, int x, int y, char * str);
+Bitmap_Font * font_pos_size_data(int bm_width, int bm_height, int bm_x, int bm_y, int x, int y, char * str);
 
 #endif

@@ -4,18 +4,12 @@
 #include "Kernel_List.h"
 // typedef char * data_type;
 
-typedef struct{
-    int Score;
-    int N_O;
-}Record;
-
 
 typedef struct my_type{
     //存储文件名
     char name[257];
     //存储文件类型
     char type;
-    Record reco;
 }data_type, *P_Data;
 
 typedef struct node{

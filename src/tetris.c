@@ -84,7 +84,7 @@ pthread_mutex_t lock;
 pthread_cond_t cond;
 P_node Start;
 P_node Pause;
-P_node record_list;
+
 
 volatile bool pause_flag = false;       //标志播放/暂停
 volatile bool reset_game = false;       //标志重启
@@ -273,37 +273,57 @@ void play_tetris(P_node head){
     get_image(tetris_start, buf);
     blind_window_in(fd_lcd, buf);           //百叶窗式显示图片
 
-    //初始化记录分数的链表
-    record_list = List_Init();
+    Record_t usr;
+    memset(&usr, 0, sizeof(Record_t));
+
+    recordNode_t * rankList = rankList_Init();      //  初始化排行榜链表
+    read_file4record(&rankList);                    //  先从文件中获取到用户的信息
 
     //播放音乐
     P_node bgm = search_2_list(head, "bgm");
     printf("开始播放音乐:%s\n", bgm->Data.name);
-    snprintf(str, 257, "madplay %s -r &", bgm->Data.name);                  //加上-r表示单曲循环
+    snprintf(str, 257, "madplay %s -r &", bgm->Data.name);                  //  加上-r表示单曲循环
     system(str);
 
     while(1){
-        if(pos_x > 30 && pos_x < 135 && pos_y > 180 && pos_y < 330){        //难度选择
+        if(pos_x > 30 && pos_x < 135 && pos_y > 180 && pos_y < 330){        //  难度选择
             pos_x = 0;
             pos_y = 0;
             start_game = true;
             printf("开始游戏\n");
-            tetris_game(head);
+            sign_in(&usr);
+            printf("用户:%s\n", usr.name);
+            tetris_game(head, usr, rankList);
             blind_window_in(fd_lcd, buf);
         }
-        if(pos_x > 160 && pos_x < 260 && pos_y > 180 && pos_y < 330){        //历史成绩
+        if(pos_x > 160 && pos_x < 260 && pos_y > 180 && pos_y < 330){        // 历史成绩
             pos_x = 0;
             pos_y = 0;
             printf("历史成绩\n");
-            char str[256] = "   排名    成绩\n    1      12\n    2      4\n    3      2\n";
-            font_pos_size_data(800, 480, 0, 0, str);
+            char rank_str[256];
+            bzero(rank_str, 256);
+            rankList = rankList_Init();
+            read_file4record(&rankList);
+            show_rankList(rankList);
+            font_show_rank(rankList);
+           /*  while(1){
+                if(pos_x && pos_y){
+                    pos_x = 0;
+                    pos_y = 0;
+                    destory_list(rankList);
+                    usleep(10);
+                    break;
+                }
+                font_pos_size_data(800, 480, 0, 0, 0, 0, rank_str);
+            } */
             blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 285 && pos_x < 385 && pos_y > 180 && pos_y < 330){        //游戏说明
             pos_x = 0;
             pos_y = 0;
             printf("游戏说明\n");
-            Bitmap_Font * bf = font_pos_size_data(800, 400, 0, 50, "俄罗斯方块怎么玩还要我教?问成哥去!\n");
+            Bitmap_Font * bf = font_pos_size_data(800, 400, 0, 0, 0, 50, "俄罗斯方块怎么玩还要我教?问成哥去!\n");
+            sleep(3);
             blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 430 && pos_x < 530 && pos_y > 180 && pos_y < 330){        //退出游戏
@@ -311,6 +331,7 @@ void play_tetris(P_node head){
             pos_y = 0;
             printf("退出游戏\n");
             //关闭音乐
+            printf("killall -SIGKILL madplay\n");
             system("killall -SIGKILL madplay");
             is_playing_video = false;
             break;
@@ -318,10 +339,10 @@ void play_tetris(P_node head){
         if(pos_x > 570 && pos_x < 670 && pos_y > 180 && pos_y < 330){        //隐藏福利
             pos_x = 0;
             pos_y = 0;
+            printf("隐藏福利\n");
             P_node good = search_2_list(head, "good2");
             display_node(good);
             sleep(2);
-            printf("隐藏福利\n");
             blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 700 && pos_x < 800 && pos_y > 0 && pos_y < 70){          //暂停/播放音乐
@@ -347,7 +368,7 @@ void play_tetris(P_node head){
 
 #if !TETRIS_DEBUG
 // 俄罗斯方块游戏
-void tetris_game(P_node head){
+void tetris_game(P_node head, Record_t usr, recordNode_t * rankList ){
     unsigned long (*buf)[WIDTH] = calloc(1, SCREEN_SIZE * 4);
     P_node tetris_back = search_2_list(head, "tetris_back");
     P_node num_once = search_2_list(head, "number0");
@@ -372,7 +393,7 @@ void tetris_game(P_node head){
     __pthread_down_block(); 
 #endif
 
-    down_block(head);
+    down_block(head, usr, rankList);
     free(buf);      //退出游戏时释放资源
 }
 #endif
@@ -569,7 +590,6 @@ void * __option_block (void * args){
                 pos_x = 0;
                 pos_y = 0;
             }else{
-                // g_block.x--;
                 pos_x = 0;
                 pos_y = 0;
                 continue;
@@ -679,7 +699,7 @@ void * __option_block (void * args){
 
 
 //保持方块下降
-void  down_block(P_node head){
+void  down_block(P_node head, Record_t usr, recordNode_t * rankList){
 
     P_node con = search_2_list(head, "confirm_reset");
     pthread_t op_tid;       //操作线程
@@ -766,8 +786,11 @@ void  down_block(P_node head){
                                                                          
             //取消操作线程
             pthread_cancel(op_tid);
-            font_pos_size_data(400, 240, 100, 100, "游戏结束");
-            // record_score();
+            font_pos_size_data(400, 240, 0, 100, 100, 100, "游戏结束");
+
+            usr.Score = score;
+            record_score2file(&usr, rankList);                //  游戏失败后将用户信息写进文件中
+
             score = 0;      //重设分数
             speed = 500;    //重置方块下降速度
             break;
@@ -910,7 +933,7 @@ void updateScore(P_node head){
         tmp/=10;
     }
     for(i = 0; i < 3; i++){
-        printf("data[%d]:%d\t要打开的图片:%s\n", i, data[i], (char*)num_pic[data[i]]);
+        // printf("data[%d]:%d\t要打开的图片:%s\n", i, data[i], (char*)num_pic[data[i]]);
         tmp_pic = search_2_list(head, (char*)num_pic[data[i]]);
         lcd_pos_size_pixel(tmp_pic, 650, 320+(i*50), 80, 48);
     }
@@ -933,47 +956,22 @@ void updataSpeed(){
 }
 
 
-//功  能:展示链表内容
-void __show_list(P_node my_list){
-
-    if( (IS_NULL(my_list)) ){
-        printf("链表异常!\n");
-        return ;
+void sign_in(Record_t * usr){
+    font_pos_size_data(800, 480, 0, 0, 100, 100, "用户名:");
+    font_pos_size_data(800, 100, 0, 200, 100, 0, "确认开始");
+    char name_buf[50];
+    printf("请输入用户命:\n");
+    scanf("%s", name_buf);
+    memcpy(usr->name, name_buf, strlen(name_buf));
+    font_pos_size_data(200, 100, 300, 100, 0, 0, name_buf);
+    while(1){
+        if(pos_x > 100 && pos_x < 250 && pos_y > 200 && pos_y < 400){
+            pos_x = 0;
+            pos_y = 0;
+            break;
+        }
     }
-    P_node tmp = NULL;
-    list_for_each_entry(tmp, &my_list->ptr, ptr){
-
-        printf("分数:%d\n", tmp->Data.reco.Score);
-    }
-
 }
 
-//记录分数
-void record_score(){
-    data_type tmp;
-    memset(&tmp, 0, sizeof(Node));
-    tmp.reco.Score = score;
-    tmp.reco.N_O   = 1;
-    //创建新节点
-    P_node new = new_node(tmp);
-    //将节点存进链表
-    node_2_list(record_list, new, 2);
-    __show_list(record_list);
-    flush_score2file();
-}
 
-//将分数记录到文件中
-void flush_score2file(){
-    FILE * p = fopen(USR_LOAD, "a+");
-    if(p == NULL){
-        perror("fopen:");
-        return ;
-    }
-    // fwrite()
-    P_node tmp;
-    list_for_each_entry(tmp, &record_list->ptr, ptr){
-        printf("当前节点的数据:%d\n", tmp->Data.reco.Score);
-        fwrite(tmp, sizeof(Node), 1, p);
-    }
-    fclose(p);
-}
+

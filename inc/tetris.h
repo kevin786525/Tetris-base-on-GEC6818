@@ -9,6 +9,8 @@
 #include "head4animation.h"
 #include "crash.h"
 #include "font.h"
+#include "rank.h"
+
 
 #define USR_LOAD "./usr/user_record.txt"
 
@@ -73,7 +75,6 @@ typedef enum {		//方块移动方向
 typedef struct {
     unsigned long c_color;
     int data;
-
 }Cell;
 
 typedef struct block{
@@ -82,9 +83,7 @@ typedef struct block{
     move_dir_t mov;
     int x;      //方块总成在全局的x坐标
     int y;      //方块总成在全局的y坐标
-    // unsigned int center_point;
     unsigned long color;
-    // int block_data[WIDTH_PIX*CELL_PER_PIX][HEIGHT_PIX*CELL_PER_PIX];
 }Block, *P_block;
 
 
@@ -92,13 +91,13 @@ typedef struct block{
 void play_tetris(P_node head);
 
 
-void tetris_game(P_node head);
+void tetris_game(P_node head, Record_t usr, recordNode_t * rankList);
 
 //设置方块的数据
 P_block set_Data();
 
 //保持方块下降
-void  down_block(P_node head);
+void  down_block(P_node head, Record_t usr, recordNode_t * rankList);
 
 //随机生成方块
 void rand_block_data(P_block new); 
@@ -140,10 +139,6 @@ void updateScore(P_node head);
 //更新下降速度
 void updataSpeed();
 
-//记录分数
-void record_score();
 
-//将分数记录到文件中
-void flush_score2file();
 
 #endif
