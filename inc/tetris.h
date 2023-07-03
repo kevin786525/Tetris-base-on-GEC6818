@@ -10,6 +10,7 @@
 #include "crash.h"
 #include "font.h"
 #include "rank.h"
+#include "net_game.h"
 
 
 #define USR_LOAD "./usr/user_record.txt"
@@ -25,7 +26,8 @@
 #define HEIGHT_PIX      5       //竖向格子数
 #define CELL_PER_PIX    20      //每个格子占像素点数
 #define GAME_WIDTH      320     //游戏宽度（像素点）
-#define GAME_HEIGHT     600     //游戏高度（像素点）以上使用全局变量来完成游戏设计
+#define GAME_HEIGHT     800     //游戏高度（像素点）以上使用全局变量来完成游戏设计
+#define NET_GAME_HEIGHT 360     //联机的游戏高度
 
 #define RED     0x00ED1C24      //红
 #define CYAN    0x000EF717      //青
@@ -112,7 +114,7 @@ void read_back_block();
 void read_block_data();
 
 //检查是否需要消行
-void check(P_node head);
+void check(P_node head, int actual_height);
 
 //消除某行方块，并且从上往下降落方块
 void down(int x);

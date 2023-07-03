@@ -1,6 +1,13 @@
+////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//      时间:2023-6-1                                                 //
+//      作者:kevin_lee                                                //
+//      内容:俄罗斯游戏的主体实现函数                                 //
+//                                                                    //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
+
 #include "tetris.h"
-
-
 //============================全局变量定义============================//
 
 
@@ -82,7 +89,7 @@ char Dir[4][4]   = {"上", "右", "下", "左"};
 
 pthread_mutex_t lock;
 pthread_cond_t cond;
-P_node Start;
+P_node Start; 
 P_node Pause;
 
 
@@ -91,8 +98,8 @@ volatile bool reset_game = false;       //标志重启
 volatile bool start_game = true;        //标志游戏启动
 volatile int speed = 500;               //方块下降的默认初始速度
 
-static int music_flag = 0;              //播放音乐标志位 
-static int score = 0;
+int music_flag = 0;              //播放音乐标志位 
+int score = 0;
 
 
 
@@ -136,22 +143,27 @@ void __set_v_cell(int x, int y, int color){
 
 
 //设置墙壁数据
-void __set_wall_data(void){
+void __set_wall_data(int actual_height){
+    printf("传到的参数:%d\n", actual_height);
     int back_width = GAME_WIDTH/CELL_PER_PIX;
-    int back_height = GAME_HEIGHT/CELL_PER_PIX;
+    int back_height = actual_height/CELL_PER_PIX;
+    printf("back_height:%d\n", back_height);
     for(int i = 0; i < back_height; i++){
         for(int j = 0; j < back_width; j++)
             if( j == 0 || j == back_width-1 || i == back_height-1){         //左下右墙壁数据设为1
                 back_block[i][j] = 1;
+                printf("%d ", back_block[i][j]);
             }else{
                 back_block[i][j] = 0;
+                printf("%d ", back_block[i][j]);
             }
+            printf("\n");
     }
 }
 
 //画出游戏墙壁
-void __draw_wall(void){
-    for(int i = 0; i < GAME_HEIGHT/CELL_PER_PIX; i++){
+void __draw_wall(int actual_height){
+    for(int i = 0; i < actual_height/CELL_PER_PIX; i++){
         for(int j = 0; j < GAME_WIDTH/CELL_PER_PIX; j ++){
             usleep(100);
             if(back_block[i][j]){
@@ -286,7 +298,7 @@ void play_tetris(P_node head){
     system(str);
 
     while(1){
-        if(pos_x > 30 && pos_x < 135 && pos_y > 180 && pos_y < 330){        //  难度选择
+        if(pos_x > 30 && pos_x < 135 && pos_y > 180 && pos_y < 330){        //  开始游戏
             pos_x = 0;
             pos_y = 0;
             start_game = true;
@@ -306,16 +318,6 @@ void play_tetris(P_node head){
             read_file4record(&rankList);
             show_rankList(rankList);
             font_show_rank(rankList);
-           /*  while(1){
-                if(pos_x && pos_y){
-                    pos_x = 0;
-                    pos_y = 0;
-                    destory_list(rankList);
-                    usleep(10);
-                    break;
-                }
-                font_pos_size_data(800, 480, 0, 0, 0, 0, rank_str);
-            } */
             blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 285 && pos_x < 385 && pos_y > 180 && pos_y < 330){        //游戏说明
@@ -343,6 +345,7 @@ void play_tetris(P_node head){
             P_node good = search_2_list(head, "good2");
             display_node(good);
             sleep(2);
+            
             blind_window_in(fd_lcd, buf);
         }
         if(pos_x > 700 && pos_x < 800 && pos_y > 0 && pos_y < 70){          //暂停/播放音乐
@@ -385,9 +388,9 @@ void tetris_game(P_node head, Record_t usr, recordNode_t * rankList ){
     srand((unsigned)time(NULL));
 
     //设置墙壁数据
-    __set_wall_data();
+    __set_wall_data(NET_GAME_HEIGHT);
     //画出游戏墙壁
-    __draw_wall();
+    __draw_wall(NET_GAME_HEIGHT);
 
 #if THREAD_DEBUG
     __pthread_down_block(); 
@@ -727,9 +730,9 @@ void  down_block(P_node head, Record_t usr, recordNode_t * rankList){
                     pthread_detach(op_tid);
                     memcpy(map, tmp, HEIGHT*WIDTH*4);                               //将原本的数据画面还原
                     //设置墙壁数据
-                    __set_wall_data();
+                    __set_wall_data(NET_GAME_HEIGHT);
                     //画出游戏墙壁
-                    __draw_wall();
+                    __draw_wall(NET_GAME_HEIGHT);
                     reset_game = false;
                     pause_flag = false;
                     break;
@@ -776,7 +779,7 @@ void  down_block(P_node head, Record_t usr, recordNode_t * rankList){
 
         read_block_data();
 
-        check(head);                //每次产生新方块之前都判断一下最后一行方块是否需要消除
+        check(head, NET_GAME_HEIGHT);                //每次产生新方块之前都判断一下最后一行方块是否需要消除
 
         //判断游戏失败
         if(failed_game()){                                                          
@@ -886,9 +889,9 @@ bool failed_game(){
 }
 
 //检查是否需要消行
-void check(P_node head){
+void check(P_node head, int actual_height){
     
-    for(int i = GAME_HEIGHT/CELL_PER_PIX-2; i >= 0; i--){
+    for(int i = actual_height/CELL_PER_PIX-2; i >= 0; i--){
         for(int j = 0; j < GAME_WIDTH/CELL_PER_PIX && back_block[i][j]; j++){
             if(j >= GAME_WIDTH/CELL_PER_PIX-1){
                 printf("%d行数据需要清理\n", i);
@@ -933,7 +936,6 @@ void updateScore(P_node head){
         tmp/=10;
     }
     for(i = 0; i < 3; i++){
-        // printf("data[%d]:%d\t要打开的图片:%s\n", i, data[i], (char*)num_pic[data[i]]);
         tmp_pic = search_2_list(head, (char*)num_pic[data[i]]);
         lcd_pos_size_pixel(tmp_pic, 650, 320+(i*50), 80, 48);
     }
@@ -941,10 +943,11 @@ void updateScore(P_node head){
 
 //更新下降速度
 void updataSpeed(){
-    if(score >= 10 ){
+    if(score < 10){
+        speed = 500;
+    }else if(score >= 10){
         speed = 300;
-    }
-    else if(score >= 20){
+    }else if(score >= 20){
         speed = 200;
     }else if(score >= 50){
         speed = 100;

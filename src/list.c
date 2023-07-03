@@ -2,7 +2,7 @@
 //                                                                    //
 //      时间:2022-5-27                                                //
 //      作者:lee                                                      //
-//      内容:双向链表的结构体以及函数                                   //
+//      内容:双向链表的结构体以及函数                                 //
 //                                                                    //
 //                                                                    //
 ////////////////////////////////////////////////////////////////////////
@@ -141,6 +141,8 @@ P_node handle_list(P_node bmpList, P_node mainList){
                 || (strstr(tmp->Data.name, "choose_difficult"))
                 || (strstr(tmp->Data.name, "good2"))
                 || (strstr(tmp->Data.name, "number"))
+                || (strstr(tmp->Data.name, "login_in"))
+                || (strstr(tmp->Data.name, "netGame_back"))
             ){
             continue;
         }
