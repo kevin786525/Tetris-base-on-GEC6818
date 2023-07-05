@@ -3,7 +3,7 @@ SRC=$(wildcard ./src/*.c)
 OBJ=$(SRC:%.c=%.o)
 CC=arm-linux-gcc
 #CC=gcc
-override CCONFIG+=-I./inc -L./lib -lfont -lpthread -lm
+override CCONFIG+=-I./inc -L./lib -lfont -lMainfunction -lhead4animation -lpthread -lm
 
 HOST=root@192.168.61.237#开发板的ip地址
 SAVE_PATH=/mmount6G
